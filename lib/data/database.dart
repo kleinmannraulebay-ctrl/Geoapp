@@ -19,8 +19,11 @@ class AppDatabase {
       p.join(dir, 'reise_tracker.db'),
       version: schemaVersion,
       onConfigure: (db) async {
-        await db.execute('PRAGMA journal_mode=WAL');
-        await db.execute('PRAGMA busy_timeout=5000');
+        // PRAGMAs mit Rückgabewert müssen bei sqflite über rawQuery laufen,
+        // sonst: "Queries can be performed using SQLiteDatabase query or
+        // rawQuery methods only".
+        await db.rawQuery('PRAGMA journal_mode=WAL');
+        await db.rawQuery('PRAGMA busy_timeout=5000');
       },
       onCreate: _createSchema,
     );

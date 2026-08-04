@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../core/constants.dart';
 import '../../geo/exploration_grid.dart';
+import '../../geo/geo_assets.dart';
 import '../../providers/providers.dart';
 import '../widgets/choropleth.dart';
 import 'country_detail_screen.dart';
 
 /// Vollbild-Weltkarte: offline gerendert aus den GeoJSON-Assets.
 /// Weit herausgezoomt Länder-Choropleth, ab Zoom 5 Regionsfärbung,
-/// optional Fog-of-War-Overlay der erkundeten Rasterzellen.
+/// zoomabhängige Städte-Marker, aktueller Standort, optional
+/// Fog-of-War-Overlay der erkundeten Rasterzellen.
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
 
@@ -23,6 +26,43 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   final _controller = MapController();
   double _zoom = 2.2;
   LatLngBounds? _bounds;
+  LatLng? _myPos;
+  bool _locating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Standort einmalig holen (nur wenn Berechtigung schon erteilt ist).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateMyPosition());
+  }
+
+  Future<void> _updateMyPosition({bool moveCamera = false}) async {
+    if (_locating) return;
+    _locating = true;
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return;
+      final perm = await Geolocator.checkPermission();
+      if (perm != LocationPermission.always &&
+          perm != LocationPermission.whileInUse) {
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+          timeLimit: Duration(seconds: 20),
+        ),
+      );
+      if (!mounted) return;
+      setState(() => _myPos = LatLng(pos.latitude, pos.longitude));
+      if (moveCamera) {
+        _controller.move(_myPos!, _zoom < 8 ? 9.5 : _zoom);
+      }
+    } catch (_) {
+      // Kein Fix (Timeout, Flugmodus …) – Marker bleibt ggf. beim alten Wert.
+    } finally {
+      _locating = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +85,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 .setFog(!settings.fogEnabled),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.small(
+        tooltip: 'Zu meinem Standort',
+        onPressed: () => _updateMyPosition(moveCamera: true),
+        child: const Icon(Icons.my_location),
       ),
       body: geoAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -87,6 +132,35 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             }
           }
 
+          // Städte-Marker (zoomabhängig, wichtigste zuerst).
+          if (_zoom >= 4 && _bounds != null) {
+            layers.add(MarkerLayer(
+                markers: _cityMarkers(geo, _bounds!, _zoom),
+                rotate: false));
+          }
+
+          // Aktueller Standort.
+          final myPos = _myPos;
+          if (myPos != null) {
+            layers.add(MarkerLayer(rotate: false, markers: [
+              Marker(
+                point: myPos,
+                width: 22,
+                height: 22,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF448AFF),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black54, blurRadius: 6),
+                    ],
+                  ),
+                ),
+              ),
+            ]));
+          }
+
           return FlutterMap(
             mapController: _controller,
             options: MapOptions(
@@ -127,6 +201,70 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ),
     );
   }
+
+  /// Wichtigste Städte im Ausschnitt: je weiter hineingezoomt, desto mehr.
+  /// geo.cities ist global nach Einwohnerzahl absteigend sortiert.
+  List<Marker> _cityMarkers(GeoData geo, LatLngBounds b, double zoom,
+      {int cap = 120}) {
+    final minPop = zoom >= 8.5
+        ? 15000
+        : zoom >= 7
+            ? 100000
+            : zoom >= 5.5
+                ? 500000
+                : 1000000;
+    final showLabels = zoom >= 5.5;
+    final markers = <Marker>[];
+    for (final c in geo.cities) {
+      final important = c.population >= minPop || (c.isCapital && zoom >= 4.5);
+      if (!important) continue;
+      if (c.lat < b.south ||
+          c.lat > b.north ||
+          c.lon < b.west ||
+          c.lon > b.east) {
+        continue;
+      }
+      markers.add(Marker(
+        point: LatLng(c.lat, c.lon),
+        width: showLabels ? 140 : 12,
+        height: showLabels ? 44 : 12,
+        alignment: Alignment.center,
+        child: showLabels
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _cityDot(c.isCapital),
+                  Text(
+                    c.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(color: Colors.black, blurRadius: 3),
+                        Shadow(color: Colors.black, blurRadius: 6),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : Center(child: _cityDot(c.isCapital)),
+      ));
+      if (markers.length >= cap) break;
+    }
+    return markers;
+  }
+
+  Widget _cityDot(bool capital) => Container(
+        width: capital ? 9 : 7,
+        height: capital ? 9 : 7,
+        decoration: BoxDecoration(
+          color: capital ? const Color(0xFFFFD54F) : Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.black87, width: 1),
+        ),
+      );
 
   List<Polygon> _fogPolygons(List<String> cellIds, LatLngBounds bounds,
       {int cap = 3000}) {

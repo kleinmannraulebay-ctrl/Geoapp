@@ -1,0 +1,54 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - claude/offline-reise-tracker-app-d1jneb
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Abhängigkeiten
+        run: flutter pub get
+
+      - name: Unit-Tests
+        run: flutter test
+
+      - name: Release-APK bauen
+        run: flutter build apk --release
+
+      - name: APK als Artifact hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: reise-tracker-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      # Direkt-Download fürs Handy: APK an ein GitHub-Release anhängen
+      - name: APK als Release veröffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: Reise-Tracker APK (aktueller Build)
+          body: |
+            Automatisch gebaute Release-APK vom letzten Stand des Branches.
+            Am Handy herunterladen und antippen zum Installieren (Sideload).
+          prerelease: true
+          files: build/app/outputs/flutter-apk/app-release.apk

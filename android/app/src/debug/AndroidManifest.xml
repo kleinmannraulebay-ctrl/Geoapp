@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Nur für Debug-Builds (Hot Reload); im Release-Build nicht enthalten. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

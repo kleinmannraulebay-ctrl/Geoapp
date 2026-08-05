@@ -11,6 +11,7 @@ import 'package:sqflite/sqflite.dart';
 import '../data/models.dart';
 import '../geo/assigner.dart';
 import '../geo/geo_assets.dart';
+import '../geo/geo_models.dart';
 
 class StatsService {
   final Database db;
@@ -18,12 +19,19 @@ class StatsService {
 
   StatsService(this.db, this.geo);
 
+  /// Region, in der eine Stadt liegt (per Punkt-in-Polygon, mit Länder-Check).
+  String? regionIdForCity(City city) {
+    final r = geo.regionIndex.locate(city.lon, city.lat);
+    return (r != null && r.countryCode == city.countryCode) ? r.id : null;
+  }
+
   // ------------------------------------------------------------------
   // Punkte verarbeiten
   // ------------------------------------------------------------------
 
   /// Verarbeitet alle unverarbeiteten Punkte. Liefert die Anzahl.
   Future<int> processPendingPoints() async {
+    await _backfillCityRegions();
     var total = 0;
     while (true) {
       final rows = await db.query('track_points',
@@ -120,13 +128,32 @@ class StatsService {
       // Häkchen (und manuell entfernte, status='dismissed') bleiben
       // unangetastet.
       await txn.rawInsert('''
-        INSERT OR IGNORE INTO city_visits(city_id, country_code, first_ts, status, source)
-        VALUES(?, ?, ?, 'visited', 'auto')
-      ''', [cityId, city.countryCode, a.ts]);
+        INSERT OR IGNORE INTO city_visits(city_id, country_code, region_id, first_ts, status, source)
+        VALUES(?, ?, ?, ?, 'visited', 'auto')
+      ''', [cityId, city.countryCode, regionIdForCity(city), a.ts]);
       await txn.rawUpdate('''
         UPDATE city_visits SET first_ts = MIN(COALESCE(first_ts, 1e15), ?)
         WHERE city_id = ? AND source = 'auto'
       ''', [a.ts, cityId]);
+    }
+  }
+
+  /// Einmalige Nacharbeit nach der Schema-Migration v2: Region der bereits
+  /// gespeicherten Städte-Besuche nachtragen und für manuell abgehakte
+  /// Städte Region + Land als besucht markieren.
+  Future<void> _backfillCityRegions() async {
+    final rows = await db.query('city_visits', where: 'region_id IS NULL');
+    for (final r in rows) {
+      final city = geo.cityById[r['city_id'] as int];
+      if (city == null) continue;
+      final regionId = regionIdForCity(city);
+      if (regionId == null) continue;
+      await db.update('city_visits', {'region_id': regionId},
+          where: 'city_id = ?', whereArgs: [r['city_id']]);
+      if (r['status'] == 'visited' && r['source'] == 'manual') {
+        await _applyManualEffects(city.countryCode, regionId, null, null, null,
+            (r['first_ts'] as int?) ?? DateTime.now().millisecondsSinceEpoch);
+      }
     }
   }
 
@@ -151,6 +178,11 @@ class StatsService {
     String? note,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
+    // Stadt impliziert ihre Region: fehlt die Region, aus der Stadt ableiten.
+    if (cityId != null && regionId == null) {
+      final city = geo.cityById[cityId];
+      if (city != null) regionId = regionIdForCity(city);
+    }
     final id = await db.insert('manual_entries', {
       'type': type,
       'country_code': countryCode,
@@ -224,13 +256,14 @@ class StatsService {
 
     if (cityId != null) {
       await db.rawInsert('''
-        INSERT INTO city_visits(city_id, country_code, first_ts, status, source)
-        VALUES(?, ?, ?, 'visited', 'manual')
+        INSERT INTO city_visits(city_id, country_code, region_id, first_ts, status, source)
+        VALUES(?, ?, ?, ?, 'visited', 'manual')
         ON CONFLICT(city_id) DO UPDATE SET
           status = 'visited',
           source = 'manual',
+          region_id = COALESCE(city_visits.region_id, excluded.region_id),
           first_ts = MIN(COALESCE(first_ts, 1e15), excluded.first_ts)
-      ''', [cityId, countryCode, ts.$1]);
+      ''', [cityId, countryCode, regionId, ts.$1]);
     }
   }
 
@@ -247,10 +280,15 @@ class StatsService {
   /// Auto-Daten (`has_auto`, Zellen, Punkte) bleiben unberührt.
   Future<void> recomputeManualFlags() async {
     await db.transaction((txn) async {
+      // Manuell besuchte Städte stützen die Besucht-Markierung ihres
+      // Landes bzw. ihrer Region ebenfalls (Stadt ⇒ Region ⇒ Land).
       await txn.rawUpdate('''
         UPDATE country_visits SET has_manual =
           EXISTS(SELECT 1 FROM manual_entries m
                  WHERE m.country_code = country_visits.country_code)
+          OR EXISTS(SELECT 1 FROM city_visits cv
+                 WHERE cv.country_code = country_visits.country_code
+                   AND cv.status = 'visited' AND cv.source = 'manual')
       ''');
       await txn.delete('country_visits',
           where: 'has_auto = 0 AND has_manual = 0');
@@ -259,6 +297,9 @@ class StatsService {
         UPDATE region_visits SET has_manual =
           EXISTS(SELECT 1 FROM manual_entries m
                  WHERE m.region_id = region_visits.region_id)
+          OR EXISTS(SELECT 1 FROM city_visits cv
+                 WHERE cv.region_id = region_visits.region_id
+                   AND cv.status = 'visited' AND cv.source = 'manual')
       ''');
       await txn.delete('region_visits',
           where: 'has_auto = 0 AND has_manual = 0');
@@ -277,22 +318,38 @@ class StatsService {
 
   /// Stadt manuell abhaken / abwählen. Manuelle Entscheidungen überleben
   /// das Auto-Tracking (dismissed-Zeilen blockieren INSERT OR IGNORE).
+  /// Abhaken markiert auch Region und Land der Stadt als besucht.
   Future<void> setCityVisited(int cityId, bool visited) async {
     final city = geo.cityById[cityId];
     if (city == null) return;
+    final regionId = regionIdForCity(city);
     if (visited) {
+      final now = DateTime.now().millisecondsSinceEpoch;
       await db.rawInsert('''
-        INSERT INTO city_visits(city_id, country_code, first_ts, status, source)
-        VALUES(?, ?, ?, 'visited', 'manual')
-        ON CONFLICT(city_id) DO UPDATE SET status = 'visited', source = 'manual'
-      ''', [cityId, city.countryCode, DateTime.now().millisecondsSinceEpoch]);
+        INSERT INTO city_visits(city_id, country_code, region_id, first_ts, status, source)
+        VALUES(?, ?, ?, ?, 'visited', 'manual')
+        ON CONFLICT(city_id) DO UPDATE SET
+          status = 'visited',
+          source = 'manual',
+          region_id = COALESCE(city_visits.region_id, excluded.region_id)
+      ''', [cityId, city.countryCode, regionId, now]);
+      // Stadt besucht ⇒ Region + Land besucht.
+      await _applyManualEffects(
+          city.countryCode, regionId, null, null, null, now);
     } else {
       await db.rawInsert('''
-        INSERT INTO city_visits(city_id, country_code, first_ts, status, source)
-        VALUES(?, ?, NULL, 'dismissed', 'manual')
+        INSERT INTO city_visits(city_id, country_code, region_id, first_ts, status, source)
+        VALUES(?, ?, ?, NULL, 'dismissed', 'manual')
         ON CONFLICT(city_id) DO UPDATE SET status = 'dismissed', source = 'manual'
-      ''', [cityId, city.countryCode]);
+      ''', [cityId, city.countryCode, regionId]);
     }
+  }
+
+  /// Alle besuchten Städte-IDs (für die grünen Punkte auf der Karte).
+  Future<Set<int>> allVisitedCityIds() async {
+    final rows = await db.query('city_visits',
+        columns: ['city_id'], where: "status = 'visited'");
+    return {for (final r in rows) r['city_id'] as int};
   }
 
   Future<Map<int, CityVisit>> cityVisits(String countryCode) async {

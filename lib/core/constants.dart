@@ -14,6 +14,24 @@ class AppConst {
   /// Standard-Intervall der periodischen Abfrage (Minuten, 10–15 einstellbar).
   static const int defaultIntervalMin = 12;
 
+  // ---- Flug-Filter ----
+  /// Über dieser Geschwindigkeit (m/s) ist kein Bodenfahrzeug mehr plausibel
+  /// (100 m/s = 360 km/h) – Punkt wird verworfen.
+  static const double hardMaxSpeedMs = 100;
+
+  /// Ab dieser Kombination aus Geschwindigkeit und Höhe gilt der Punkt als
+  /// Flug (200 km/h in > 2.500 m Höhe fährt kein Auto/Zug).
+  static const double flightSpeedMs = 55;
+  static const double flightAltitudeM = 2500;
+
+  /// Überflüge zählen nicht als Besuch: Punkte mit Fluggeschwindigkeit
+  /// werden gar nicht erst gespeichert (z. B. Spanien beim Flug nach
+  /// Marokko).
+  static bool isLikelyFlight(double speedMs, double altitudeM) {
+    if (speedMs > hardMaxSpeedMs) return true;
+    return speedMs > flightSpeedMs && altitudeM > flightAltitudeM;
+  }
+
   // ---- Erkundungsraster ----
   /// Rasterauflösung in Grad (0,05° ≈ 5,5 km in N-S-Richtung).
   static const double gridRes = 0.05;

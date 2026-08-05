@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 class AppDatabase {
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
   static Database? _db;
 
   /// Öffnet (bzw. liefert) die Datenbank. Von jedem Isolate aufrufbar;
@@ -26,6 +26,14 @@ class AppDatabase {
         await db.rawQuery('PRAGMA busy_timeout=5000');
       },
       onCreate: _createSchema,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          // v2: Region der Stadt speichern, damit ein Stadt-Besuch auch
+          // ihre Region (und ihr Land) als besucht markieren kann.
+          await db.execute(
+              'ALTER TABLE city_visits ADD COLUMN region_id TEXT');
+        }
+      },
     );
     _db = db;
     return db;
@@ -87,6 +95,7 @@ class AppDatabase {
       CREATE TABLE city_visits(
         city_id INTEGER PRIMARY KEY,
         country_code TEXT NOT NULL,
+        region_id TEXT,
         first_ts INTEGER,
         status TEXT NOT NULL DEFAULT 'visited',
         source TEXT NOT NULL

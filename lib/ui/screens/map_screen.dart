@@ -134,10 +134,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             }
           }
 
-          // Städte-Marker (zoomabhängig, wichtigste zuerst).
+          // Städte-Marker (zoomabhängig, wichtigste zuerst; besuchte grün).
           if (_zoom >= 4 && _bounds != null) {
+            final visitedCities =
+                ref.watch(visitedCityIdsProvider).valueOrNull ?? const <int>{};
             layers.add(MarkerLayer(
-                markers: _cityMarkers(geo, _bounds!, _zoom),
+                markers: _cityMarkers(geo, _bounds!, _zoom, visitedCities),
                 rotate: false));
           }
 
@@ -233,7 +235,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   /// Wichtigste Städte im Ausschnitt: je weiter hineingezoomt, desto mehr.
   /// geo.cities ist global nach Einwohnerzahl absteigend sortiert.
-  List<Marker> _cityMarkers(GeoData geo, LatLngBounds b, double zoom,
+  List<Marker> _cityMarkers(
+      GeoData geo, LatLngBounds b, double zoom, Set<int> visitedCities,
       {int cap = 120}) {
     final minPop = zoom >= 8.5
         ? 15000
@@ -253,6 +256,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           c.lon > b.east) {
         continue;
       }
+      final visited = visitedCities.contains(c.id);
       markers.add(Marker(
         point: LatLng(c.lat, c.lon),
         width: showLabels ? 140 : 12,
@@ -262,15 +266,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ? Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _cityDot(c.isCapital),
+                  _cityDot(c.isCapital, visited),
                   Text(
                     c.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white,
-                      shadows: [
+                      color: visited ? const Color(0xFF69F0AE) : Colors.white,
+                      shadows: const [
                         Shadow(color: Colors.black, blurRadius: 3),
                         Shadow(color: Colors.black, blurRadius: 6),
                       ],
@@ -278,20 +282,24 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
                 ],
               )
-            : Center(child: _cityDot(c.isCapital)),
+            : Center(child: _cityDot(c.isCapital, visited)),
       ));
       if (markers.length >= cap) break;
     }
     return markers;
   }
 
-  Widget _cityDot(bool capital) => Container(
-        width: capital ? 9 : 7,
-        height: capital ? 9 : 7,
+  /// Besuchte Städte leuchten grün, Hauptstädte tragen einen gelben Rand.
+  Widget _cityDot(bool capital, bool visited) => Container(
+        width: capital ? 10 : 8,
+        height: capital ? 10 : 8,
         decoration: BoxDecoration(
-          color: capital ? const Color(0xFFFFD54F) : Colors.white,
+          color: visited ? const Color(0xFF00E676) : Colors.white,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.black87, width: 1),
+          border: Border.all(
+            color: capital ? const Color(0xFFFFD54F) : Colors.black87,
+            width: capital ? 1.5 : 1,
+          ),
         ),
       );
 

@@ -73,6 +73,16 @@ class _TrackingTaskHandler extends TaskHandler {
     // Qualitätsfilter: grobe Positionen verwerfen.
     if (pos.accuracy > AppConst.maxAccuracyM) return;
 
+    // Flug-Filter: Überflüge (hohe Geschwindigkeit, große Höhe) zählen
+    // nicht als Besuch – z. B. Spanien beim Flug nach Marokko.
+    final speed = pos.speed.isFinite && pos.speed > 0 ? pos.speed : 0.0;
+    final altitude = pos.altitude.isFinite ? pos.altitude : 0.0;
+    if (AppConst.isLikelyFlight(speed, altitude)) {
+      FlutterForegroundTask.updateService(
+          notificationText: 'Flug erkannt – Position wird nicht gewertet');
+      return;
+    }
+
     // Stillstand: Punkte < 50 m neben dem letzten nur einmal pro Poll
     // aufnehmen (hält Besuchstage aktuell, vermeidet aber Duplikat-Fluten).
     final lastLat = _lastLat, lastLon = _lastLon;

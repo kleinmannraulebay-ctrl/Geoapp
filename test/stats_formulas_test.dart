@@ -23,6 +23,21 @@ void main() {
     });
   });
 
+  group('Flug-Filter', () {
+    test('Reisen am Boden werden nicht gefiltert', () {
+      expect(AppConst.isLikelyFlight(0, 0), isFalse); // Stillstand
+      expect(AppConst.isLikelyFlight(36, 200), isFalse); // Auto, 130 km/h
+      expect(AppConst.isLikelyFlight(83, 300), isFalse); // ICE, 300 km/h
+      expect(AppConst.isLikelyFlight(30, 2800), isFalse); // Pass-Straße
+    });
+
+    test('Flüge werden gefiltert', () {
+      expect(AppConst.isLikelyFlight(240, 11000), isTrue); // Reiseflug
+      expect(AppConst.isLikelyFlight(80, 3000), isTrue); // Landeanflug
+      expect(AppConst.isLikelyFlight(120, 0), isTrue); // > 360 km/h
+    });
+  });
+
   group('Intensitäts-Stufen (Choropleth)', () {
     test('Grenzwerte', () {
       expect(AppConst.intensityStage(0), 0);

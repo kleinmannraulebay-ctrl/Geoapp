@@ -147,6 +147,13 @@ final visitedRegionsProvider =
   return stats.visitedRegionIds(countryCode);
 });
 
+/// Alle besuchten Städte (grüne Punkte auf der Karte).
+final visitedCityIdsProvider = FutureProvider<Set<int>>((ref) async {
+  ref.watch(statsVersionProvider);
+  final stats = await ref.watch(statsServiceProvider.future);
+  return stats.allVisitedCityIds();
+});
+
 /// Städte-Besuchsstatus eines Landes.
 final cityVisitsProvider =
     FutureProvider.family<Map<int, CityVisit>, String>((ref, code) async {

@@ -32,22 +32,28 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
-            release {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                // Eigener Keystore des Nutzers (hat Vorrang, z. B. fuer Play Store).
                 keyAlias = keystoreProperties["keyAlias"]
                 keyPassword = keystoreProperties["keyPassword"]
                 storeFile = keystoreProperties["storeFile"] ? file(keystoreProperties["storeFile"]) : null
                 storePassword = keystoreProperties["storePassword"]
+            } else {
+                // Fester, im Repo liegender Schluessel: sorgt dafuer, dass jede
+                // CI-APK dieselbe Signatur traegt und Updates ohne Deinstallation
+                // funktionieren. Nur fuer privates Sideloading gedacht.
+                keyAlias = "reisetracker"
+                keyPassword = "reisetracker"
+                storeFile = rootProject.file("signing/ci-release.keystore")
+                storePassword = "reisetracker"
             }
         }
     }
 
     buildTypes {
         release {
-            // Ohne key.properties wird mit dem Debug-Key signiert (fuer lokale Tests).
-            signingConfig = keystorePropertiesFile.exists()
-                    ? signingConfigs.release
-                    : signingConfigs.debug
+            signingConfig = signingConfigs.release
             minifyEnabled = true
             shrinkResources = true
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"

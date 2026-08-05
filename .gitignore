@@ -17,6 +17,9 @@ android/app/*.keystore
 android/app/*.jks
 *.keystore
 *.jks
+# Fester CI-Signierschluessel (nur fuer privates Sideloading) MUSS committet sein,
+# damit jede CI-APK dieselbe Signatur traegt und Updates installierbar bleiben:
+!android/signing/ci-release.keystore
 
 # IDE
 .idea/

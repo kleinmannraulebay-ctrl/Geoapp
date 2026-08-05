@@ -75,7 +75,15 @@ flutter run            # Gerät per USB, Entwickleroptionen + USB-Debugging akti
 
 ## 4. Signierte Release-APK
 
-### 4.1 Keystore erzeugen (einmalig)
+> **Standard-Signatur (Sideload/CI):** Ohne `android/key.properties` wird mit dem
+> im Repo liegenden Keystore `android/signing/ci-release.keystore` signiert
+> (Alias/Passwörter: `reisetracker`). Dadurch trägt jede APK — auch aus GitHub
+> Actions — dieselbe Signatur und lässt sich als Update über die installierte App
+> ziehen. Achtung: Da der Schlüssel im Repo liegt, ist er **nicht geheim**; für
+> eine Play-Store-Veröffentlichung unbedingt einen eigenen Keystore anlegen
+> (Schritte unten) — `key.properties` hat automatisch Vorrang.
+
+### 4.1 Eigenen Keystore erzeugen (für Veröffentlichung, einmalig)
 
 ```bash
 keytool -genkey -v \

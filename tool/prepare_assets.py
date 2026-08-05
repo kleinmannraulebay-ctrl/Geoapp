@@ -193,10 +193,15 @@ def process_admin0(src, out):
             geom = simplify_geometry(f["geometry"], tol=0.005, min_ring_area=0.0)
         if not geom or not code:
             continue
+        iso2 = p.get("ISO_A2") or ""
+        if iso2 == "-99":
+            # Natural-Earth-Luecken (z. B. Frankreich, Norwegen)
+            iso2 = {"FRA": "FR", "NOR": "NO", "KOS": "XK"}.get(code, "")
         feats.append({
             "type": "Feature",
             "properties": {
                 "code": code,
+                "iso2": iso2,
                 "name": p.get("NAME_DE") or p.get("NAME") or p.get("ADMIN"),
                 "continent": CONTINENT_DE.get(p.get("CONTINENT"), p.get("CONTINENT")),
                 "area": round(geometry_area_km2(f["geometry"]), 1),

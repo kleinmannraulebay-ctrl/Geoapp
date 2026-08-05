@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../core/flags.dart';
 import '../../data/models.dart';
 import '../../geo/geo_models.dart';
 import '../../providers/providers.dart';
@@ -46,7 +47,8 @@ class CountryDetailScreen extends ConsumerWidget {
             : df.format(DateTime.fromMillisecondsSinceEpoch(ts));
 
         return Scaffold(
-          appBar: AppBar(title: Text(country.name)),
+          appBar: AppBar(
+              title: Text('${flagEmoji(country.iso2)}  ${country.name}')),
           body: ListView(
             children: [
               // ---- Mini-Karte ----
@@ -84,36 +86,56 @@ class CountryDetailScreen extends ConsumerWidget {
               ),
 
               // ---- Kennzahlen ----
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (stats != null) ...[
-                      ProgressRow(
-                          label: 'Regionen',
-                          value: stats.regionPercent,
-                          detail:
-                              '${stats.regionsVisited}/${stats.regionsTotal}'),
-                      ProgressRow(
-                          label: 'Städte',
-                          value: stats.cityPercent,
-                          detail:
-                              '${stats.citiesVisited}/${stats.citiesListed}'),
-                      ProgressRow(
-                          label: 'Fläche',
-                          value: stats.areaPercent,
-                          detail:
-                              '${(stats.areaPercent * 100).toStringAsFixed(2)} %'),
-                      const SizedBox(height: 8),
-                      if (fmt(stats.firstTs) != null)
-                        Text('Erstbesuch: ${fmt(stats.firstTs)}'
-                            '   ·   Letzter Besuch: ${fmt(stats.lastTs)}'),
-                      Text('Besuchstage: ${stats.visitDays}'),
-                    ],
-                  ],
+              if (stats != null)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ProgressRow(
+                              label: 'Regionen',
+                              value: stats.regionPercent,
+                              detail:
+                                  '${stats.regionsVisited}/${stats.regionsTotal}'),
+                          ProgressRow(
+                              label: 'Städte',
+                              value: stats.cityPercent,
+                              detail:
+                                  '${stats.citiesVisited}/${stats.citiesListed}'),
+                          ProgressRow(
+                              label: 'Fläche',
+                              value: stats.areaPercent,
+                              detail:
+                                  '${(stats.areaPercent * 100).toStringAsFixed(2)} %'),
+                          if (fmt(stats.firstTs) != null ||
+                              stats.visitDays > 0) ...[
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: [
+                                if (fmt(stats.firstTs) != null)
+                                  _InfoChip(
+                                      icon: Icons.flight_land,
+                                      text: 'Erstbesuch ${fmt(stats.firstTs)}'),
+                                if (fmt(stats.lastTs) != null)
+                                  _InfoChip(
+                                      icon: Icons.history,
+                                      text: 'Zuletzt ${fmt(stats.lastTs)}'),
+                                _InfoChip(
+                                    icon: Icons.calendar_month,
+                                    text: '${stats.visitDays} Besuchstage'),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
 
               // ---- Regionen ----
               if (regions.isNotEmpty) ...[
@@ -171,6 +193,31 @@ class CountryDetailScreen extends ConsumerWidget {
     final (minLon, minLat, maxLon, maxLat) = f.bbox;
     return LatLngBounds(LatLng(minLat, minLon), LatLng(maxLat, maxLon));
   }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _InfoChip({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: const Color(0xFF2DD4BF)),
+            const SizedBox(width: 5),
+            Text(text,
+                style:
+                    const TextStyle(fontSize: 12, color: Colors.white70)),
+          ],
+        ),
+      );
 }
 
 class _SectionHeader extends StatelessWidget {

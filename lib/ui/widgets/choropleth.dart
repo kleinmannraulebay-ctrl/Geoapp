@@ -62,12 +62,14 @@ List<Polygon> featurePolygons(
 /// Choropleth-Layer für Länder anhand der Intensitäts-Stufe (0–5).
 List<Polygon> countryChoropleth(
   List<GeoFeature> countries,
-  int Function(String code) stageOf,
-) {
+  int Function(String code) stageOf, {
+  double borderWidth = 0.6,
+}) {
   final polygons = <Polygon>[];
   for (final c in countries) {
     final stage = stageOf(c.id).clamp(0, 5);
-    polygons.addAll(featurePolygons(c, fill: stageColors[stage]));
+    polygons.addAll(featurePolygons(c,
+        fill: stageColors[stage], borderWidth: borderWidth));
   }
   return polygons;
 }

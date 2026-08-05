@@ -15,25 +15,34 @@ class ProgressRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 5),
         child: Row(
           children: [
-            SizedBox(width: 80, child: Text(label)),
+            SizedBox(
+              width: 76,
+              child: Text(label,
+                  style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            ),
             Expanded(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
                   value: value.clamp(0.0, 1.0),
-                  minHeight: 8,
-                  backgroundColor: const Color(0xFF263238),
-                  color: const Color(0xFF26A69A),
+                  minHeight: 10,
+                  backgroundColor: Colors.white.withValues(alpha: 0.06),
+                  color: const Color(0xFF2DD4BF),
                 ),
               ),
             ),
             const SizedBox(width: 12),
             SizedBox(
-              width: 90,
-              child: Text(detail, textAlign: TextAlign.end),
+              width: 88,
+              child: Text(
+                detail,
+                textAlign: TextAlign.end,
+                style: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),

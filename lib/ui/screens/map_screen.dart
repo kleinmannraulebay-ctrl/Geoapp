@@ -102,11 +102,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
           final layers = <Widget>[];
 
-          // Länder-Choropleth (immer als Basis).
+          // Länder-Choropleth (immer als Basis); beim Herauszoomen mit
+          // kräftigeren Grenzen, damit die Länder besser herausstechen.
           layers.add(PolygonLayer(
             polygons: countryChoropleth(
               geo.countries,
               (code) => AppConst.intensityStage(stats[code]?.visitDays ?? 0),
+              borderWidth: _zoom < 5 ? 1.1 : 0.6,
             ),
           ));
 
@@ -132,6 +134,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             if (cells != null && _bounds != null) {
               layers.add(PolygonLayer(polygons: _fogPolygons(cells, _bounds!)));
             }
+          }
+
+          // Ländernamen beim Herauszoomen (große Länder zuerst).
+          if (_zoom < 7 && _bounds != null) {
+            layers.add(MarkerLayer(
+                markers: _countryLabels(geo, _bounds!, _zoom), rotate: false));
           }
 
           // Städte-Marker (zoomabhängig, wichtigste zuerst; besuchte grün).
@@ -233,6 +241,74 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     );
   }
 
+  /// Beschriftungs-Anker pro Land (Mitte der BBox des größten Polygons).
+  static final Map<String, LatLng> _labelPointCache = {};
+
+  LatLng _labelPoint(GeoFeature f) => _labelPointCache.putIfAbsent(f.id, () {
+        var best = f.polygons.first;
+        var bestSize = 0.0;
+        for (final p in f.polygons) {
+          final size = (p.maxLon - p.minLon) * (p.maxLat - p.minLat);
+          if (size > bestSize) {
+            bestSize = size;
+            best = p;
+          }
+        }
+        return LatLng(
+            (best.minLat + best.maxLat) / 2, (best.minLon + best.maxLon) / 2);
+      });
+
+  /// Ländernamen-Labels: weit herausgezoomt nur die großen Länder,
+  /// beim Hineinzoomen zunehmend alle.
+  List<Marker> _countryLabels(GeoData geo, LatLngBounds b, double zoom,
+      {int cap = 60}) {
+    final minArea = zoom < 3
+        ? 400000.0
+        : zoom < 4
+            ? 90000.0
+            : zoom < 5
+                ? 15000.0
+                : 0.0;
+    final markers = <Marker>[];
+    final candidates = geo.countryIndex.inBounds(b.west, b.south, b.east, b.north)
+      ..sort((x, y) => y.areaKm2.compareTo(x.areaKm2));
+    for (final c in candidates) {
+      if (c.areaKm2 < minArea) continue;
+      final p = _labelPoint(c);
+      if (p.latitude < b.south ||
+          p.latitude > b.north ||
+          p.longitude < b.west ||
+          p.longitude > b.east) {
+        continue;
+      }
+      markers.add(Marker(
+        point: p,
+        width: 160,
+        height: 32,
+        child: Center(
+          child: Text(
+            c.name.toUpperCase(),
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: zoom < 4 ? 10 : 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+              color: const Color(0xE6FFFFFF),
+              shadows: const [
+                Shadow(color: Colors.black87, blurRadius: 4),
+                Shadow(color: Colors.black54, blurRadius: 8),
+              ],
+            ),
+          ),
+        ),
+      ));
+      if (markers.length >= cap) break;
+    }
+    return markers;
+  }
+
   /// Wichtigste Städte im Ausschnitt: je weiter hineingezoomt, desto mehr.
   /// geo.cities ist global nach Einwohnerzahl absteigend sortiert.
   List<Marker> _cityMarkers(
@@ -304,7 +380,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
 
   List<Polygon> _fogPolygons(List<String> cellIds, LatLngBounds bounds,
-      {int cap = 3000}) {
+      {int cap = 6000}) {
     final polygons = <Polygon>[];
     for (final id in cellIds) {
       final (latIdx, lonIdx) = ExplorationGrid.parseCellId(id);
@@ -323,9 +399,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           LatLng(lat + res, lon + res),
           LatLng(lat + res, lon),
         ],
-        color: const Color(0x55FFF59D),
-        borderColor: const Color(0x88FFF59D),
-        borderStrokeWidth: 0.4,
+        color: const Color(0x4DFFF176),
+        borderStrokeWidth: 0,
       ));
       if (polygons.length >= cap) break;
     }

@@ -2,9 +2,9 @@
 
 Eine Android-App (Flutter), die deine Reisen **vollständig offline** aufzeichnet:
 
-- **Hintergrund-Tracking** über einen Foreground-Service (dauerhafte Notification), akkuschonend: Position alle 10–15 Minuten *oder* nach > 250 m Bewegung; Positionen ungenauer als 200 m werden verworfen.
+- **Hintergrund-Tracking** über einen Foreground-Service (dauerhafte Notification), akkuschonend: Position alle 3–15 Minuten (einstellbar) *oder* nach > 100 m Bewegung; Positionen ungenauer als 200 m werden verworfen.
 - **Offline-Weltkarte** (Choropleth) aus gebündelten Natural-Earth-GeoJSON-Assets — keine Online-Tiles, die App deklariert **keine INTERNET-Permission**.
-- **Erkundungs-Prozentsatz** über ein globales 0,05°-Raster (≈ 20–31 km² pro Zelle, sphärisch korrekt berechnet), optional als „Fog of War“-Overlay.
+- **Erkundungs-Prozentsatz** über ein globales 0,01°-Raster (≈ 0,4–1,2 km² pro Zelle, sphärisch korrekt berechnet), optional als „Fog of War“-Overlay.
 - **Städte-Checkliste** (Top 10/25/50 pro Land, Radius nach Einwohnerzahl 5–25 km), **Länderliste** mit drei Prozentwerten (Regionen/Städte/Fläche), **Kontinent-Dashboard** mit Welt-Gesamtstatistik.
 - **Manuelle Nachträge** früherer Reisen (Land/Region/Stadt, Zeitraum, Notiz), klar getrennt von automatischen Daten, einzeln editier-/löschbar.
 - **Backup**: Export/Import der kompletten SQLite-Datenbank als JSON über den Android-Dateidialog.
@@ -19,7 +19,7 @@ lib/
   data/models.dart             Statistik-/Eintrags-Modelle
   geo/point_in_polygon.dart    Ray-Casting (Even-Odd) + BBox-Vorfilter
   geo/spatial_index.dart       Grid-Index über Polygone & Städte (<10 ms/Punkt)
-  geo/exploration_grid.dart    0,05°-Erkundungsraster (Zell-IDs, Flächen)
+  geo/exploration_grid.dart    0,01°-Erkundungsraster (Zell-IDs, Flächen)
   geo/geo_assets.dart          Laden/Parsen der gzip-GeoJSON-Assets (im Isolate)
   geo/assigner.dart            Punkt → Land/Region/Zelle/Städte (Isolate-Batch)
   services/tracking_service.dart  Foreground-Service + Permission-Flow

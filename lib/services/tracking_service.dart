@@ -41,9 +41,9 @@ class _TrackingTaskHandler extends TaskHandler {
     _db = await AppDatabase.open();
     _stream = Geolocator.getPositionStream(
       locationSettings: AndroidSettings(
-        accuracy: LocationAccuracy.high,
+        accuracy: LocationAccuracy.best,
         distanceFilter: AppConst.distanceFilterM,
-        intervalDuration: const Duration(minutes: 2),
+        intervalDuration: const Duration(minutes: 1),
       ),
     ).listen(_onPosition, onError: (_) {});
     // Direkt eine erste Position holen.
@@ -59,7 +59,7 @@ class _TrackingTaskHandler extends TaskHandler {
     try {
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
+          accuracy: LocationAccuracy.high,
           timeLimit: Duration(seconds: 45),
         ),
       );

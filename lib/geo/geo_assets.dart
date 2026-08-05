@@ -86,6 +86,7 @@ GeoData _parseAll(List<Uint8List> raw) {
       name: props['name'] as String,
       countryCode: props['code'] as String,
       continent: (props['continent'] as String?) ?? 'Ozeanien',
+      iso2: (props['iso2'] as String?) ?? '',
       areaKm2: (props['area'] as num).toDouble(),
       polygons: packGeometry(f['geometry'] as Map<String, dynamic>),
     ));

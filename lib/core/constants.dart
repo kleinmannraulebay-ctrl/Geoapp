@@ -9,10 +9,14 @@ class AppConst {
   static const double maxAccuracyM = 200;
 
   /// Distanzfilter des Positions-Streams (Meter).
-  static const int distanceFilterM = 250;
+  static const int distanceFilterM = 100;
 
-  /// Standard-Intervall der periodischen Abfrage (Minuten, 10–15 einstellbar).
-  static const int defaultIntervalMin = 12;
+  /// Standard-Intervall der periodischen Abfrage (Minuten, 3–15 einstellbar).
+  static const int defaultIntervalMin = 5;
+
+  /// Einstellbarer Bereich des Abfrage-Intervalls (Minuten).
+  static const int minIntervalMin = 3;
+  static const int maxIntervalMin = 15;
 
   // ---- Flug-Filter ----
   /// Über dieser Geschwindigkeit (m/s) ist kein Bodenfahrzeug mehr plausibel
@@ -33,8 +37,8 @@ class AppConst {
   }
 
   // ---- Erkundungsraster ----
-  /// Rasterauflösung in Grad (0,05° ≈ 5,5 km in N-S-Richtung).
-  static const double gridRes = 0.05;
+  /// Rasterauflösung in Grad (0,01° ≈ 1,1 km in N-S-Richtung).
+  static const double gridRes = 0.01;
 
   // ---- Städte ----
   /// Standard: Top-N-Städte pro Land in der Checkliste.
@@ -57,8 +61,9 @@ class AppConst {
   /// Ab dieser Zoomstufe werden Regionen statt Länder eingefärbt.
   static const double regionZoomThreshold = 5.0;
 
-  /// Ab dieser Zoomstufe wird der Fog-of-War-Layer gezeichnet.
-  static const double fogZoomThreshold = 7.0;
+  /// Ab dieser Zoomstufe wird der Fog-of-War-Layer gezeichnet
+  /// (bei 0,01°-Zellen sind die Kacheln erst ab ~Zoom 9 sinnvoll sichtbar).
+  static const double fogZoomThreshold = 9.0;
 
   /// Stufe 1–5 anhand der Anzahl unterschiedlicher Besuchstage.
   static int intensityStage(int visitDays) {

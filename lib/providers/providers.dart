@@ -93,7 +93,9 @@ class SettingsNotifier extends Notifier<SettingsState> {
   }
 
   void setInterval(int min) {
-    state = state.copyWith(intervalMin: min.clamp(10, 15));
+    state = state.copyWith(
+        intervalMin:
+            min.clamp(AppConst.minIntervalMin, AppConst.maxIntervalMin));
     _persist('interval', state.intervalMin.toString());
   }
 

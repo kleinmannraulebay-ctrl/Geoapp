@@ -36,6 +36,16 @@ class ContinentsScreen extends ConsumerWidget {
   }
 }
 
+const _continentEmoji = {
+  'Europa': '🏰',
+  'Asien': '🏯',
+  'Afrika': '🦁',
+  'Nordamerika': '🗽',
+  'Südamerika': '🦜',
+  'Ozeanien': '🏝️',
+  'Antarktis': '🐧',
+};
+
 class _WorldCard extends StatelessWidget {
   final WorldStats world;
   const _WorldCard({required this.world});
@@ -43,37 +53,61 @@ class _WorldCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pct = NumberFormat('0.000', 'de');
-    return Card(
-      color: const Color(0xFF16262E),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Gesamte Welt',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            ProgressRow(
-              label: 'Länder',
-              value: world.countriesTotal == 0
-                  ? 0
-                  : world.countriesVisited / world.countriesTotal,
-              detail: '${world.countriesVisited}/${world.countriesTotal}',
-            ),
-            ProgressRow(
-              label: 'Städte',
-              value: world.citiesListed == 0
-                  ? 0
-                  : world.citiesVisited / world.citiesListed,
-              detail: '${world.citiesVisited}/${world.citiesListed}',
-            ),
-            ProgressRow(
-              label: 'Weltfläche',
-              value: world.areaPercent,
-              detail: '${pct.format(world.areaPercent * 100)} %',
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF134E4A), Color(0xFF152232)],
         ),
+        border: Border.all(color: const Color(0x332DD4BF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🌍', style: TextStyle(fontSize: 32)),
+              const SizedBox(width: 12),
+              Text('Gesamte Welt',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800)),
+              const Spacer(),
+              Text(
+                '${pct.format(world.areaPercent * 100)} %',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF2DD4BF),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ProgressRow(
+            label: 'Länder',
+            value: world.countriesTotal == 0
+                ? 0
+                : world.countriesVisited / world.countriesTotal,
+            detail: '${world.countriesVisited}/${world.countriesTotal}',
+          ),
+          ProgressRow(
+            label: 'Städte',
+            value: world.citiesListed == 0
+                ? 0
+                : world.citiesVisited / world.citiesListed,
+            detail: '${world.citiesVisited}/${world.citiesListed}',
+          ),
+          ProgressRow(
+            label: 'Weltfläche',
+            value: world.areaPercent,
+            detail: '${pct.format(world.areaPercent * 100)} %',
+          ),
+        ],
       ),
     );
   }
@@ -92,8 +126,29 @@ class _ContinentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(stats.name, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(_continentEmoji[stats.name] ?? '🌐',
+                    style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 10),
+                Text(stats.name,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+                const Spacer(),
+                Text(
+                  '${stats.countriesVisited}/${stats.countriesTotal}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: stats.countriesVisited > 0
+                        ? const Color(0xFF2DD4BF)
+                        : Colors.white38,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
             ProgressRow(
               label: 'Länder',
               value: stats.countriesTotal == 0

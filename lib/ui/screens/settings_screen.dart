@@ -44,9 +44,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Slider(
-              min: 10,
-              max: 15,
-              divisions: 5,
+              min: AppConst.minIntervalMin.toDouble(),
+              max: AppConst.maxIntervalMin.toDouble(),
+              divisions: AppConst.maxIntervalMin - AppConst.minIntervalMin,
               value: settings.intervalMin.toDouble(),
               label: '${settings.intervalMin} min',
               onChanged: (v) =>
@@ -169,9 +169,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       'deinen Standort – auch im Hintergrund („Immer erlauben“).\n\n'
       'Die Daten bleiben ausschließlich auf deinem Gerät. Die App hat '
       'keinen Internetzugriff.\n\n'
-      'Es wird alle 10–15 Minuten bzw. nach 250 m Bewegung eine Position '
-      'gespeichert. Positionen, die ungenauer als 200 m sind, werden '
-      'verworfen.',
+      'Es wird alle ${AppConst.minIntervalMin}–${AppConst.maxIntervalMin} '
+      'Minuten bzw. nach ${AppConst.distanceFilterM} m Bewegung eine '
+      'Position gespeichert. Positionen, die ungenauer als '
+      '${AppConst.maxAccuracyM.toInt()} m sind, werden verworfen. Flüge '
+      'werden erkannt und nicht gewertet.',
     );
     if (!ok) return;
 

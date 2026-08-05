@@ -18,6 +18,9 @@ class GeoFeature {
   /// Nur bei Ländern gesetzt (deutsch, z. B. "Europa").
   final String continent;
 
+  /// ISO-3166-alpha-2 (für Flaggen-Emoji); leer bei Regionen/Sondergebieten.
+  final String iso2;
+
   /// Gesamtfläche in km² (aus der unsimplifizierten Geometrie berechnet).
   final double areaKm2;
 
@@ -30,6 +33,7 @@ class GeoFeature {
     required this.continent,
     required this.areaKm2,
     required this.polygons,
+    this.iso2 = '',
   });
 
   bool contains(double lon, double lat) {

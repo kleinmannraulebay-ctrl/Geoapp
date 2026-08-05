@@ -16,8 +16,11 @@ class ReiseTrackerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF26A69A),
+      seedColor: const Color(0xFF2DD4BF),
       brightness: Brightness.dark,
+    ).copyWith(
+      surface: const Color(0xFF101B28),
+      primary: const Color(0xFF2DD4BF),
     );
     return MaterialApp(
       title: 'Reise-Tracker',
@@ -25,8 +28,33 @@ class ReiseTrackerApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: scheme,
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFF10181F),
-        appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF10181F)),
+        scaffoldBackgroundColor: const Color(0xFF0B141E),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF0B141E),
+          elevation: 0,
+          titleTextStyle: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+            color: Colors.white,
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFF152232),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: const Color(0xFF0E1824),
+          indicatorColor: const Color(0xFF2DD4BF).withValues(alpha: 0.18),
+          height: 70,
+        ),
+        dividerColor: Colors.white12,
+        snackBarTheme: const SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+        ),
       ),
       themeMode: ThemeMode.dark,
       locale: const Locale('de'),

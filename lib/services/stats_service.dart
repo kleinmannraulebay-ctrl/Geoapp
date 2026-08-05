@@ -8,7 +8,9 @@ library;
 
 import 'package:sqflite/sqflite.dart';
 
+import '../data/database.dart';
 import '../data/models.dart';
+import '../geo/exploration_grid.dart';
 import '../geo/assigner.dart';
 import '../geo/geo_assets.dart';
 import '../geo/geo_models.dart';
@@ -32,6 +34,7 @@ class StatsService {
   /// Verarbeitet alle unverarbeiteten Punkte. Liefert die Anzahl.
   Future<int> processPendingPoints() async {
     await _backfillCityRegions();
+    await _ensureGridResolution();
     var total = 0;
     while (true) {
       final rows = await db.query('track_points',
@@ -136,6 +139,39 @@ class StatsService {
         WHERE city_id = ? AND source = 'auto'
       ''', [a.ts, cityId]);
     }
+  }
+
+  /// Wurde die Rasterauflösung geändert (App-Update), sind gespeicherte
+  /// Zell-IDs wertlos: Auto-Aggregate verwerfen und alle Roh-Punkte neu
+  /// verarbeiten (manuelle Einträge und Städte-Häkchen bleiben erhalten).
+  Future<void> _ensureGridResolution() async {
+    const current = ExplorationGrid.res;
+    final stored = await AppDatabase.getSetting(db, 'grid_res');
+    if (stored != null && double.tryParse(stored) == current) return;
+    if (stored == null) {
+      final rows =
+          await db.rawQuery('SELECT COUNT(*) AS n FROM visited_cells');
+      final hasCells = ((rows.first['n'] as int?) ?? 0) > 0;
+      if (!hasCells) {
+        // Frische Installation – nichts neu zu berechnen.
+        await AppDatabase.setSetting(db, 'grid_res', current.toString());
+        return;
+      }
+    }
+    await db.transaction((txn) async {
+      await txn.delete('visited_cells');
+      await txn.delete('visit_days');
+      await txn.rawUpdate(
+          'UPDATE country_visits SET has_auto = 0, explored_km2 = 0');
+      await txn.delete('country_visits',
+          where: 'has_manual = 0');
+      await txn.rawUpdate(
+          'UPDATE region_visits SET has_auto = 0, explored_km2 = 0');
+      await txn.delete('region_visits', where: 'has_manual = 0');
+      await txn.rawUpdate('UPDATE track_points SET processed = 0');
+    });
+    await AppDatabase.setSetting(db, 'grid_res', current.toString());
+    // Die Punkte verarbeitet processPendingPoints() im Anschluss.
   }
 
   /// Einmalige Nacharbeit nach der Schema-Migration v2: Region der bereits

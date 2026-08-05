@@ -28,9 +28,9 @@ void main() {
   });
 
   group('Zellfläche', () {
-    test('Äquator-Zelle ≈ 30,9 km²', () {
+    test('Äquator-Zelle ≈ 1,24 km²', () {
       final a = ExplorationGrid.cellAreaKm2(ExplorationGrid.latIndex(0.0));
-      expect(a, closeTo(30.9, 0.2));
+      expect(a, closeTo(1.236, 0.01));
     });
 
     test('Fläche nimmt zu den Polen ab', () {

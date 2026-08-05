@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/flags.dart';
 import '../../data/models.dart';
+import '../../geo/geo_assets.dart';
 import '../../providers/providers.dart';
 import 'country_detail_screen.dart';
 
@@ -97,9 +99,11 @@ class _CountryListScreenState extends ConsumerState<CountryListScreen> {
                       a.cityPercent)
                   .compareTo(b.areaPercent + b.regionPercent + b.cityPercent));
           }
+          final geo = ref.watch(geoDataProvider).valueOrNull;
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: list.length,
-            itemBuilder: (_, i) => _CountryTile(stats: list[i]),
+            itemBuilder: (_, i) => _CountryTile(stats: list[i], geo: geo),
           );
         },
       ),
@@ -109,30 +113,119 @@ class _CountryListScreenState extends ConsumerState<CountryListScreen> {
 
 class _CountryTile extends StatelessWidget {
   final CountryStats stats;
-  const _CountryTile({required this.stats});
+  final GeoData? geo;
+  const _CountryTile({required this.stats, this.geo});
 
   @override
   Widget build(BuildContext context) {
     String pct(double v) => '${(v * 100).toStringAsFixed(v >= 0.1 ? 0 : 1)} %';
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: stats.visited
-            ? const Color(0xFF26A69A)
-            : Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Text(stats.code.substring(0, 2)),
+    final iso2 = geo?.countryByCode[stats.code]?.iso2 ?? '';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Card(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => CountryDetailScreen(countryCode: stats.code),
+          )),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Row(
+              children: [
+                Text(flagEmoji(iso2), style: const TextStyle(fontSize: 30)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              stats.name,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          if (stats.visited) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.check_circle,
+                                size: 15, color: Color(0xFF2DD4BF)),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          _StatChip(
+                              icon: Icons.map,
+                              text:
+                                  '${stats.regionsVisited}/${stats.regionsTotal}'),
+                          _StatChip(
+                              icon: Icons.location_city,
+                              text:
+                                  '${stats.citiesVisited}/${stats.citiesListed}'),
+                          _StatChip(
+                              icon: Icons.grid_on,
+                              text: pct(stats.areaPercent)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      pct(stats.areaPercent),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: stats.visited
+                            ? const Color(0xFF2DD4BF)
+                            : Colors.white38,
+                      ),
+                    ),
+                    const Text('Fläche',
+                        style:
+                            TextStyle(fontSize: 10, color: Colors.white38)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      title: Text(stats.name),
-      subtitle: Text(
-        '${stats.continent} · Regionen ${stats.regionsVisited}/${stats.regionsTotal}'
-        ' · Städte ${stats.citiesVisited}/${stats.citiesListed}'
-        ' · Fläche ${pct(stats.areaPercent)}',
-      ),
-      trailing: stats.visited
-          ? const Icon(Icons.check_circle, color: Color(0xFF26A69A))
-          : null,
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => CountryDetailScreen(countryCode: stats.code),
-      )),
     );
   }
+}
+
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _StatChip({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: Colors.white54),
+            const SizedBox(width: 4),
+            Text(text,
+                style:
+                    const TextStyle(fontSize: 11, color: Colors.white70)),
+          ],
+        ),
+      );
 }

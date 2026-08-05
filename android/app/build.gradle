@@ -27,8 +27,11 @@ android {
         applicationId = "de.example.reisetracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        // In CI zaehlt die Run-Nummer hoch, damit jede APK als Update
+        // installierbar ist (Android verlangt steigende versionCodes).
+        def ciRun = System.getenv("GITHUB_RUN_NUMBER")
+        versionCode = ciRun != null ? ciRun.toInteger() + 100 : 1
+        versionName = "1.1.0"
     }
 
     signingConfigs {

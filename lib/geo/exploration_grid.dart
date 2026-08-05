@@ -1,7 +1,11 @@
-/// Globales Erkundungsraster: 0,05°-Zellen (≈ 20–31 km² je nach Breite).
+/// Globales Erkundungsraster: 0,01°-Zellen (≈ 0,4–1,2 km² je nach Breite).
 ///
 /// Zell-IDs sind stabil und kompakt: `"<latIdx>:<lonIdx>"` mit
-/// `latIdx ∈ [0, 3600)` und `lonIdx ∈ [0, 7200)`.
+/// `latIdx ∈ [0, 18000)` und `lonIdx ∈ [0, 36000)`.
+///
+/// Achtung: Eine Änderung von [res] entwertet gespeicherte Zell-IDs —
+/// StatsService rechnet die Aggregate dann automatisch aus den
+/// Roh-Punkten neu (siehe `_ensureGridResolution`).
 library;
 
 import 'dart:math' as math;
@@ -9,9 +13,9 @@ import 'dart:math' as math;
 class ExplorationGrid {
   ExplorationGrid._();
 
-  static const double res = 0.05;
-  static const int latCells = 3600; // 180 / 0.05
-  static const int lonCells = 7200; // 360 / 0.05
+  static const double res = 0.01;
+  static const int latCells = 18000; // 180 / 0.01
+  static const int lonCells = 36000; // 360 / 0.01
   static const double _earthR = 6371.0088; // km
 
   static int latIndex(double lat) {

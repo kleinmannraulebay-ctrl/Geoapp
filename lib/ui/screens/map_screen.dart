@@ -7,8 +7,10 @@ import 'package:latlong2/latlong.dart';
 import '../../core/constants.dart';
 import '../../geo/exploration_grid.dart';
 import '../../geo/geo_assets.dart';
+import '../../geo/geo_models.dart';
 import '../../providers/providers.dart';
 import '../widgets/choropleth.dart';
+import '../widgets/mark_visited_sheet.dart';
 import 'country_detail_screen.dart';
 
 /// Vollbild-Weltkarte: offline gerendert aus den GeoJSON-Assets.
@@ -193,6 +195,33 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         CountryDetailScreen(countryCode: country.id),
                   ));
                 }
+              },
+              // Langes Drücken: „Da war ich schon“ für Land/Region/Stadt
+              // am Tipppunkt, optional mit Zeitraum.
+              onLongPress: (tapPos, latLng) {
+                final lat = latLng.latitude, lon = latLng.longitude;
+                final country = geo.countryIndex.locate(lon, lat);
+                if (country == null) return;
+                final region = geo.regionIndex.locate(lon, lat);
+                final validRegion =
+                    (region != null && region.countryCode == country.id)
+                        ? region
+                        : null;
+                City? nearestCity;
+                var bestKm = 30.0;
+                for (final c in geo.cityIndex.nearby(lat, lon, 30)) {
+                  final d = ExplorationGrid.distanceKm(lat, lon, c.lat, c.lon);
+                  if (d < bestKm) {
+                    bestKm = d;
+                    nearestCity = c;
+                  }
+                }
+                showMarkVisitedSheet(
+                  context,
+                  country: country,
+                  region: validRegion,
+                  city: nearestCity,
+                );
               },
             ),
             children: layers,

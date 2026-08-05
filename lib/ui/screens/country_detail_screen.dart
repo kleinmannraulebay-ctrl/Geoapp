@@ -8,6 +8,7 @@ import '../../data/models.dart';
 import '../../geo/geo_models.dart';
 import '../../providers/providers.dart';
 import '../widgets/choropleth.dart';
+import '../widgets/mark_visited_sheet.dart';
 import '../widgets/progress_row.dart';
 
 /// Detailseite eines Landes: Mini-Karte, drei Prozentwerte, Regionsliste
@@ -129,6 +130,14 @@ class CountryDetailScreen extends ConsumerWidget {
                           : null,
                     ),
                     title: Text(r.name),
+                    trailing: const Icon(Icons.add_location_alt, size: 18),
+                    // Tippen: „Da war ich schon“ – Region als besucht
+                    // markieren, optional mit Zeitraum.
+                    onTap: () => showMarkVisitedSheet(
+                      context,
+                      country: country,
+                      region: r,
+                    ),
                   ),
               ],
 
@@ -144,6 +153,11 @@ class CountryDetailScreen extends ConsumerWidget {
                     await stats.setCityVisited(city.id, checked);
                     ref.read(statsVersionProvider.notifier).state++;
                   },
+                  onAddEntry: () => showMarkVisitedSheet(
+                    context,
+                    country: country,
+                    city: city,
+                  ),
                 ),
               const SizedBox(height: 24),
             ],
@@ -174,11 +188,13 @@ class _CityTile extends StatelessWidget {
   final City city;
   final CityVisit? visit;
   final ValueChanged<bool> onChanged;
+  final VoidCallback onAddEntry;
 
   const _CityTile({
     required this.city,
     required this.visit,
     required this.onChanged,
+    required this.onAddEntry,
   });
 
   @override
@@ -205,12 +221,21 @@ class _CityTile extends StatelessWidget {
         if (visited && firstTs != null)
           'besucht am ${df.format(DateTime.fromMillisecondsSinceEpoch(firstTs))}',
       ].join(' · ')),
-      secondary: visited
-          ? Tooltip(
+      secondary: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (visited)
+            Tooltip(
               message: manual ? 'Manuell abgehakt' : 'Automatisch erkannt',
               child: Icon(manual ? Icons.edit : Icons.gps_fixed, size: 18),
-            )
-          : null,
+            ),
+          IconButton(
+            tooltip: 'Besuch mit Zeitraum eintragen',
+            icon: const Icon(Icons.event_available, size: 20),
+            onPressed: onAddEntry,
+          ),
+        ],
+      ),
     );
   }
 }

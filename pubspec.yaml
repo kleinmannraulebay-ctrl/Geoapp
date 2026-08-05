@@ -1,0 +1,48 @@
+name: reise_tracker
+description: Offline-Reise-Tracker – lokales Standort-Tracking mit Weltkarte, komplett ohne Internet.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State-Management
+  flutter_riverpod: 2.6.1
+
+  # Karte (offline, ohne Tiles – nur Polygon-Layer aus lokalen GeoJSON-Assets)
+  flutter_map: 7.0.2
+  latlong2: 0.9.1
+
+  # Standort + Foreground-Service
+  geolocator: 13.0.2
+  flutter_foreground_task: 8.17.0
+
+  # Lokale Datenbank
+  sqflite: 2.4.1
+  path_provider: 2.1.5
+  # Version wird von flutter_test (SDK) gepinnt – Constraint offen lassen
+  path: ^1.9.0
+
+  # Backup über den Android-Dateidialog (SAF – braucht keine Permissions)
+  file_picker: 8.1.4
+
+  # Version wird von flutter_localizations (SDK) vorgegeben
+  intl: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/geo/countries.json.gz
+    - assets/geo/regions.json.gz
+    - assets/geo/cities.json.gz

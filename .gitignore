@@ -1,0 +1,30 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Android
+android/local.properties
+android/.gradle/
+android/gradlew
+android/gradlew.bat
+android/gradle/wrapper/gradle-wrapper.jar
+android/key.properties
+android/app/*.keystore
+android/app/*.jks
+*.keystore
+*.jks
+# Fester CI-Signierschluessel (nur fuer privates Sideloading) MUSS committet sein,
+# damit jede CI-APK dieselbe Signatur traegt und Updates installierbar bleiben:
+!android/signing/ci-release.keystore
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Asset-Rohdaten (werden von tool/prepare_assets.py geladen)
+build_assets/

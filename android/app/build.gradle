@@ -1,0 +1,69 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+android {
+    namespace = "de.example.reisetracker"
+    compileSdk = 35
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    defaultConfig {
+        applicationId = "de.example.reisetracker"
+        minSdk = 26
+        targetSdk = 35
+        // In CI zaehlt die Run-Nummer hoch, damit jede APK als Update
+        // installierbar ist (Android verlangt steigende versionCodes).
+        def ciRun = System.getenv("GITHUB_RUN_NUMBER")
+        versionCode = ciRun != null ? ciRun.toInteger() + 100 : 1
+        versionName = "1.1.0"
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                // Eigener Keystore des Nutzers (hat Vorrang, z. B. fuer Play Store).
+                keyAlias = keystoreProperties["keyAlias"]
+                keyPassword = keystoreProperties["keyPassword"]
+                storeFile = keystoreProperties["storeFile"] ? file(keystoreProperties["storeFile"]) : null
+                storePassword = keystoreProperties["storePassword"]
+            } else {
+                // Fester, im Repo liegender Schluessel: sorgt dafuer, dass jede
+                // CI-APK dieselbe Signatur traegt und Updates ohne Deinstallation
+                // funktionieren. Nur fuer privates Sideloading gedacht.
+                keyAlias = "reisetracker"
+                keyPassword = "reisetracker"
+                storeFile = rootProject.file("signing/ci-release.keystore")
+                storePassword = "reisetracker"
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.release
+            minifyEnabled = true
+            shrinkResources = true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}

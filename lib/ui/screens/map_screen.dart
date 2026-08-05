@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -259,7 +261,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       });
 
   /// Ländernamen-Labels: weit herausgezoomt nur die großen Länder,
-  /// beim Hineinzoomen zunehmend alle.
+  /// beim Hineinzoomen zunehmend alle. Labels, die sich auf dem Bildschirm
+  /// überlappen würden, werden ausgeblendet — große Länder haben Vorrang.
   List<Marker> _countryLabels(GeoData geo, LatLngBounds b, double zoom,
       {int cap = 60}) {
     final minArea = zoom < 3
@@ -269,6 +272,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             : zoom < 5
                 ? 15000.0
                 : 0.0;
+
+    // Web-Mercator-Projektion in Pixel für die Kollisionsprüfung.
+    final worldPx = 256.0 * math.pow(2, zoom);
+    double xOf(double lon) => (lon + 180) / 360 * worldPx;
+    double yOf(double lat) {
+      final s =
+          math.sin(lat * math.pi / 180).clamp(-0.9999, 0.9999).toDouble();
+      return (0.5 - math.log((1 + s) / (1 - s)) / (4 * math.pi)) * worldPx;
+    }
+
+    final fontSize = zoom < 4 ? 10.0 : 11.0;
+    final placed = <Rect>[];
     final markers = <Marker>[];
     final candidates = geo.countryIndex.inBounds(b.west, b.south, b.east, b.north)
       ..sort((x, y) => y.areaKm2.compareTo(x.areaKm2));
@@ -281,6 +296,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           p.longitude > b.east) {
         continue;
       }
+      // Geschätzte Label-Größe (Großbuchstaben + Letter-Spacing).
+      final w = math.min(160.0, c.name.length * fontSize * 0.78 + 10);
+      final rect = Rect.fromCenter(
+        center: Offset(xOf(p.longitude), yOf(p.latitude)),
+        width: w,
+        height: fontSize * 2.4,
+      );
+      if (placed.any((r) => r.overlaps(rect.inflate(3)))) continue;
+      placed.add(rect);
       markers.add(Marker(
         point: p,
         width: 160,
